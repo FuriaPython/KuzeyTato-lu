@@ -1,0 +1,66 @@
+import sounddevice as sd
+import numpy as np
+import time
+
+# ================
+DEVICE = 2
+
+PEAK_THRESHOLD = 0.035     
+MIN_GAP = 0.18
+
+MAX_DURATION = 0.22       
+COOLDOWN = 0.8            
+
+# ======================
+
+last_peak = 0
+led = False
+last_toggle = 0
+
+sound_active = False
+start_time = 0
+
+
+def callback(indata, frames, time_info, status):
+    global last_peak, led, last_toggle
+    global sound_active, start_time
+
+    now = time.time()
+
+    volume = np.max(np.abs(indata))
+
+    
+    if volume > PEAK_THRESHOLD and now - last_peak > MIN_GAP:
+
+        if not sound_active:
+            sound_active = True
+            start_time = now
+
+        last_peak = now
+
+    
+    if sound_active and volume < 0.008:
+
+        duration = now - start_time
+        sound_active = False
+
+        
+        if duration < MAX_DURATION:
+
+            
+            if now - last_toggle > COOLDOWN:
+
+                led = not led
+                last_toggle = now
+
+                if led:
+                    print(" CLAP =  ON |", round(volume,3))
+                else:
+                    print(" CLAP =  OFF |", round(volume,3))
+
+
+print("START")
+
+with sd.InputStream(device=DEVICE, channels=1, callback=callback):
+    while True:
+        time.sleep(0.05)
